@@ -1,0 +1,18 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="48" height="48" rx="8" fill="#F9FAFB"/>
+
+  <!-- Folder -->
+  <path d="M10 14C10 12.8954 10.8954 12 12 12H20L22 14H36C37.1046 14 38 14.8954 38 16V32C38 33.1046 37.1046 34 36 34H12C10.8954 34 10 33.1046 10 32V14Z" fill="#E0E0E0" stroke="#9E9E9E"/>
+
+  <!-- Code Brackets -->
+  <path d="M20 22L16 24L20 26" stroke="#424242" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 22L32 24L28 26" stroke="#424242" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Sync Circle -->
+  <circle cx="36" cy="12" r="6" fill="#2196F3"/>
+  <path d="M36 9V11L38 9" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36 15V13L34 15" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34.5 10.5C35.1667 10 36.8333 10 37.5 10.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M37.5 13.5C36.8333 14 35.1667 14 34.5 13.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

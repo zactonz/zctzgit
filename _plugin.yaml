@@ -1,0 +1,13 @@
+# Zactonz Git Plugin
+#
+# @author Team Zactonz
+# @copyright Zactonz Technologies
+# @link https://zactonz.com/
+# @version 1.0
+
+entry:
+  category: "Files"
+  name: "Zactonz Git"
+  icon: "zctzgit.svg"
+  order: 1
+  url: "index.live.php"
