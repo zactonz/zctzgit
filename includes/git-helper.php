@@ -9,7 +9,7 @@
  * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
- * @version 1.0
+ * @version 1.0.1
  */
 
 
@@ -79,9 +79,42 @@ function deployRepo(array $repo): bool {
     $returnCode = 0;
     exec($cmd . ' 2>&1', $output, $returnCode);
 
-    // Optional: Log for debugging (ensure this path is private)
-    // file_put_contents('/home/USERNAME/git_deploy.log', implode("\n", $output) . "\n", FILE_APPEND);
+    if ($returnCode === 0) {
+        protectGitDirectory($destinationDir);
+    }
 
     return $returnCode === 0;
+}
+
+/**
+ * Deny web access to the .git directory of a deployed repository.
+ *
+ * The remote URL git stores in .git/config carries the access token for private
+ * repositories, so the directory must never be served. This covers Apache and
+ * LiteSpeed; NGINX ignores .htaccess and needs a server-level rule instead.
+ *
+ * @param string $destinationDir The deployed repository directory.
+ * @return void
+ */
+function protectGitDirectory(string $destinationDir): void {
+    $gitDir = $destinationDir . '/.git';
+    if (!is_dir($gitDir)) {
+        return;
+    }
+
+    $htaccessFile = $gitDir . '/.htaccess';
+    $rules = "<IfModule mod_authz_core.c>\n"
+        . "Require all denied\n"
+        . "</IfModule>\n"
+        . "<IfModule !mod_authz_core.c>\n"
+        . "Order allow,deny\n"
+        . "Deny from all\n"
+        . "</IfModule>\n";
+
+    if (!is_file($htaccessFile) || file_get_contents($htaccessFile) !== $rules) {
+        file_put_contents($htaccessFile, $rules);
+    }
+
+    @chmod($gitDir, 0700);
 }
 ?>

@@ -9,7 +9,7 @@
 # @author Zactonz Technologies
 # @copyright Zactonz Technologies
 # @link https://zactonz.com/
-# @version 1.0
+# @version 1.0.1
 
 PLUGIN_DIR="/usr/local/cpanel/base/frontend/jupiter/zctzgit"
 

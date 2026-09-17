@@ -9,7 +9,7 @@
  * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
- * @version 1.0
+ * @version 1.0.1
  */
 
 
@@ -17,12 +17,14 @@ require_once '/usr/local/cpanel/php/cpanel.php';
 
 define('PLUGIN_BASE_DIR', '/usr/local/cpanel/base/frontend/jupiter/zctzgit');
 
-require_once PLUGIN_BASE_DIR . '/includes/config.php';
 require_once PLUGIN_BASE_DIR . '/includes/git-config.php';
 
 $cpanel = new CPANEL();
 
 $username = getenv('USER');
+if (!$username) { die("Could not determine cPanel username."); }
+
+$homeDir = rtrim(getenv('HOME') ?: "/home/{$username}", '/');
 $config = new ZctzGitConfig($username);
 $repos = $config->getReposConfig();
 $gatewayDir = $config->getGatewayDirectory();
@@ -34,6 +36,7 @@ echo $cpanel->header('Zactonz Git');
     .btn-group .btn { margin-right: 5px; }
     .zctz-flx{ display:flex; flex-wrap: wrap; gap:5px; }
     a.list-group-item{ color: #428bca; }
+    .zctz-rule{ margin-top:20px; padding:0; }
 </style>
 
 <div class="row">
@@ -91,7 +94,7 @@ echo $cpanel->header('Zactonz Git');
                         <div id="repoPathFieldSegment" class="col-xs-12">
                             <div class="input-group">
                                 <span class="input-group-addon truncate">
-                                    <span uib-tooltip="/home/<?php echo $username;?>/" class="home-dir-text">/home/<?php echo $username;?>/</span>
+                                    <span uib-tooltip="<?php echo htmlspecialchars($homeDir, ENT_QUOTES); ?>/" class="home-dir-text"><?php echo htmlspecialchars($homeDir, ENT_QUOTES); ?>/</span>
                                     <span class="sr-only">
                                         Enter a valid directory path, relative to your home directory.
                                     </span>
@@ -115,8 +118,8 @@ echo $cpanel->header('Zactonz Git');
                     </div>
                     <div class="row">
                         <div class="col-xs-12 col-sm-12">
-                            <input type="password" name="github_token" class="form-control" autocomplete="new-password" required>
-                            <span class="help-block">Read access to code, metadata, pull requests, and repository</span>
+                            <input type="password" name="github_token" class="form-control" autocomplete="new-password">
+                            <span class="help-block">Leave empty for public repositories. For private ones, the token needs read access to code, metadata, pull requests and the repository.</span>
                         </div>
                     </div>
                     <div class="row">
@@ -147,7 +150,7 @@ echo $cpanel->header('Zactonz Git');
                 </div>
             </div>
         </div>
-        <div class="col-xs-12" style="margin-top:20px;padding:0">
+        <div class="col-xs-12 zctz-rule">
             <hr/>
         </div>
         <div class="row">
@@ -173,7 +176,7 @@ echo $cpanel->header('Zactonz Git');
                             <tr>
                                 <td>
                                     <strong><?php echo htmlspecialchars($repo['repo_name'] ?? 'N/A'); ?></strong><br>
-                                    <small>Path: <?php echo str_replace("/home/{$username}", "", htmlspecialchars($repo['destination_dir']) ); ?></small>
+                                    <small>Path: <?php echo htmlspecialchars(str_replace($homeDir, '', $repo['destination_dir'] ?? ''), ENT_QUOTES); ?></small>
                                 </td>
                                 <td>
                                     <span class="label label-<?php echo $repo['auto_sync'] ? 'success' : 'warning'; ?>">
@@ -200,7 +203,7 @@ echo $cpanel->header('Zactonz Git');
                                 <td>
                                     <div class="btn-group zctz-flx">
                                         <button class="btn btn-xs btn-primary" onclick="syncNow(<?php echo $index; ?>)">Sync Now</button>
-                                        <button class="btn btn-xs btn-info" onclick="showWebhookUrl('<?php echo htmlspecialchars($_SERVER['HTTP_HOST']); ?>', '<?php echo htmlspecialchars($gatewayDir); ?>', '<?php echo htmlspecialchars($repo['repo_secret_id']); ?>')">Webhook</button>
+                                        <button class="btn btn-xs btn-info" onclick="showWebhookUrl('<?php echo htmlspecialchars($_SERVER['HTTP_HOST'] ?? '', ENT_QUOTES); ?>', '<?php echo htmlspecialchars($gatewayDir, ENT_QUOTES); ?>', '<?php echo htmlspecialchars($repo['repo_secret_id'] ?? '', ENT_QUOTES); ?>')">Webhook</button>
                                         <button class="btn btn-xs btn-<?php echo $repo['auto_sync'] ? 'warning' : 'success'; ?>" onclick="toggleAutoSync(<?php echo $index; ?>, <?php echo $repo['auto_sync'] ? '0' : '1'; ?>)">
                                             <?php echo $repo['auto_sync'] ? 'Disable' : 'Enable'; ?>
                                         </button>

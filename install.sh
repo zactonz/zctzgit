@@ -9,7 +9,7 @@
 # @author Zactonz Technologies
 # @copyright Zactonz Technologies
 # @link https://zactonz.com/
-# @version 1.0
+# @version 1.0.1
 
 PLUGIN_DIR="/usr/local/cpanel/base/frontend/jupiter/zctzgit"
 
@@ -22,7 +22,11 @@ fi
 # --- Installation ---
 echo "Installing Zactonz Git Plugin files..."
 mkdir -p "$PLUGIN_DIR"
-rsync -a --exclude='install.sh' --exclude='uninstall.sh' ./ "$PLUGIN_DIR/"
+rsync -a --delete --delete-excluded \
+    --exclude='.git' --exclude='.gitignore' --exclude='.github' \
+    --exclude='install.sh' --exclude='uninstall.sh' \
+    --exclude='README.md' --exclude='CHANGELOG.md' --exclude='LICENSE' \
+    ./ "$PLUGIN_DIR/"
 chown root:root -R "$PLUGIN_DIR"
 find "$PLUGIN_DIR" -type d -exec chmod 755 {} \;
 find "$PLUGIN_DIR" -type f -exec chmod 644 {} \;

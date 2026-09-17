@@ -9,7 +9,7 @@
  * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
- * @version 1.0
+ * @version 1.0.1
  */
  
  
@@ -31,20 +31,33 @@ if (!$repo_secret_id) {
     
 }
 
-$username = getenv('USER');
-w
-if (!$username) {
-    $path_parts = explode('/', __DIR__);
-    $user_index = array_search('home', $path_parts);
-    if ($user_index !== false && isset($path_parts[$user_index + 1])) {
-        $username = $path_parts[$user_index + 1];
-    } else {
-        http_response_code(500);
-        exit("Server Error: Could not determine user context.");
+$username = getenv('USER') ?: '';
+
+if ($username === '' || $username === 'nobody') {
+    $candidatePaths = [
+        $_SERVER['SCRIPT_FILENAME'] ?? '',
+        $_SERVER['DOCUMENT_ROOT'] ?? '',
+    ];
+    foreach ($candidatePaths as $candidatePath) {
+        if ($candidatePath !== '' && preg_match('#^/home\d*/([^/]+)/#', $candidatePath, $matches)) {
+            $username = $matches[1];
+            break;
+        }
     }
 }
 
-require_once __DIR__ . '/includes/config.php';
+if (($username === '' || $username === 'nobody') && function_exists('posix_geteuid')) {
+    $owner = posix_getpwuid(posix_geteuid());
+    if (!empty($owner['name']) && $owner['name'] !== 'nobody') {
+        $username = $owner['name'];
+    }
+}
+
+if ($username === '' || $username === 'nobody') {
+    http_response_code(500);
+    exit("Server Error: Could not determine user context.");
+}
+
 require_once __DIR__ . '/includes/git-config.php';
 require_once __DIR__ . '/includes/git-helper.php';
 

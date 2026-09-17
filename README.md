@@ -1,6 +1,6 @@
 # Zactonz Git
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.0.1-blue.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 
 A WHM plugin that keeps cPanel account directories in sync with GitHub repositories. Once a repository is configured, every push to GitHub can be deployed automatically through a webhook, or pulled on demand from the cPanel interface.
 
@@ -23,17 +23,25 @@ Documentation: [developers.zactonz.com/cpanel-whm/zctzgit](https://developers.za
 | WHM / cPanel | 106 or newer, Jupiter theme |
 | Git | 2.18 or newer |
 | PHP | 7.2 or newer |
-| Web server | Apache, LiteSpeed or NGINX |
+| Web server | Apache or LiteSpeed |
 | Access | Root, over SSH or WHM Terminal |
 
 Tested on CentOS 7 and 8, AlmaLinux 8 and 9, Rocky Linux and CloudLinux OS. The server needs outbound HTTPS to github.com, and GitHub must be able to reach the account's domain over HTTPS if webhooks are used. The PHP `exec` function must be enabled for the account.
+
+The webhook receiver is served from the account's document root and relies on `.htaccess`, so automatic deployment requires Apache or LiteSpeed. Manual sync works on any web server.
 
 ## Install
 
 Run as `root`:
 
 ```bash
-cd /root && wget -N https://packages.zactonz.com/cpanel/plugins/zctzgit/latest/zctzgit.tar.gz && tar -xzvf zctzgit.tar.gz && cd zctzgit && bash install.sh
+cd /root && curl -fsSLO https://github.com/zactonz/zctzgit/releases/latest/download/zctzgit.tar.gz && tar -xzf zctzgit.tar.gz && cd zctzgit && bash install.sh
+```
+
+Each release is published with a `zctzgit.tar.gz.sha256` file. To verify the download before running the installer:
+
+```bash
+curl -fsSLO https://github.com/zactonz/zctzgit/releases/latest/download/zctzgit.tar.gz.sha256 && sha256sum -c zctzgit.tar.gz.sha256
 ```
 
 The installer copies the plugin into cPanel's plugin directory, registers it with the Jupiter theme and restarts the cPanel UI. Log in to any cPanel account and look for **Zactonz Git** under **Files**. If the icon does not appear straight away, log out and back in so the theme cache refreshes.
@@ -46,7 +54,11 @@ git clone https://github.com/zactonz/zctzgit.git && cd zctzgit && bash install.s
 
 ### Update
 
-Run the install command again. `wget -N` downloads the archive only when a newer version is published, and the installer replaces the plugin files in place. Configured repositories are kept.
+Download the current release and run the installer again. It replaces the plugin files in place and removes files left by the previous version. Configured repositories live in each account's home directory and are kept.
+
+Release notes for every version are in [CHANGELOG.md](CHANGELOG.md).
+
+> **Upgrading from 1.0.0:** version 1.0.0 contained syntax errors that prevented it from running at all, so it has no saved state to preserve. Install 1.0.1 over it.
 
 ### Uninstall
 

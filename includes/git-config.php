@@ -9,10 +9,8 @@
  * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
- * @version 1.0
+ * @version 1.0.1
  */
-
-<?php
 
 class ZctzGitConfig {
     private $username;
@@ -68,7 +66,14 @@ class ZctzGitConfig {
 
     // Retrieve repository configurations
     public function getReposConfig() {
-        $repos = json_decode(file_get_contents($this->getConfigFile()), true);
+        $configFile = $this->getConfigFile();
+        if (!is_file($configFile) || !is_readable($configFile)) {
+            return [];
+        }
+        $repos = json_decode((string) file_get_contents($configFile), true);
+        if (!is_array($repos)) {
+            return [];
+        }
         foreach ($repos as $key => $repo) {
             if (isset($repo['github_token'])) {
                 $repos[$key]['github_token'] = $this->decrypt($repo['github_token']);

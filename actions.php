@@ -9,11 +9,10 @@
  * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
- * @version 1.0
+ * @version 1.0.1
  */
 
 define('PLUGIN_BASE_DIR', '/usr/local/cpanel/base/frontend/jupiter/zctzgit');
-require_once PLUGIN_BASE_DIR . '/includes/config.php';
 require_once PLUGIN_BASE_DIR . '/includes/git-config.php';
 require_once PLUGIN_BASE_DIR . '/includes/git-helper.php';
 

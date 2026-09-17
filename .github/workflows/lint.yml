@@ -1,0 +1,60 @@
+name: Lint
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  php:
+    name: PHP syntax (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["7.4", "8.1", "8.3"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Check every PHP file parses
+        run: |
+          status=0
+          while IFS= read -r file; do
+            if ! php -l "$file" > /dev/null 2>&1; then
+              echo "::error file=$file::$(php -l "$file" 2>&1 | head -1)"
+              status=1
+            fi
+          done < <(find . -type f -name '*.php' -not -path './.git/*')
+          exit $status
+
+  shell:
+    name: Shell syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every shell script parses
+        run: |
+          status=0
+          for file in *.sh; do
+            if ! bash -n "$file"; then
+              echo "::error file=$file::bash -n failed"
+              status=1
+            fi
+          done
+          exit $status
+
+  manifests:
+    name: Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check install.json is valid JSON
+        run: python3 -c "import json; json.load(open('install.json'))"
+      - name: Check _plugin.yaml is valid YAML
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 -c "import yaml; yaml.safe_load(open('_plugin.yaml'))"
