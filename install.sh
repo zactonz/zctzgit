@@ -6,7 +6,7 @@
 # on the cPanel server. It copies the plugin files to the appropriate
 # directory and registers the plugin with cPanel.
 #
-# @author Team Zactonz
+# @author Zactonz Technologies
 # @copyright Zactonz Technologies
 # @link https://zactonz.com/
 # @version 1.0

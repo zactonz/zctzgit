@@ -6,7 +6,7 @@
  * to the user's server. It handles cloning the repository for the first time or
  * pulling the latest changes if the repository is already cloned.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0

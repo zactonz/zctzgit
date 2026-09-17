@@ -6,7 +6,7 @@
  * integrate with cPanel and provide users with a convenient way to manage their
  * GitHub repositories.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0

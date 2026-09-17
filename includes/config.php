@@ -5,7 +5,7 @@
  * This file defines the necessary constants for the Zactonz Git plugin, including
  * the paths for the data and log directories.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0

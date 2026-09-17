@@ -6,7 +6,7 @@
 # from the cPanel server. It unregisters the plugin and removes the
 # plugin files from the server.
 #
-# @author Team Zactonz
+# @author Zactonz Technologies
 # @copyright Zactonz Technologies
 # @link https://zactonz.com/
 # @version 1.0

@@ -6,7 +6,7 @@
  * including storing and retrieving GitHub repository information, as well as handling
  * encryption and decryption of sensitive data like GitHub access tokens.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0

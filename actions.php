@@ -6,7 +6,7 @@
  * in the Zactonz Git plugin, such as toggling auto-sync, deleting repositories, and
  * manually syncing repositories.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0

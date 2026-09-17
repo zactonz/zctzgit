@@ -6,7 +6,7 @@
  * It processes the form data submitted from the plugin's main interface and saves the
  * repository configuration, then attempts to deploy the repository to the user's server.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0

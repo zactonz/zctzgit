@@ -1,148 +1,110 @@
-# Zactonz Git – WHM/cPanel Plugin ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+# Zactonz Git
 
-**Zactonz Git** is a powerful WHM plugin that enables automatic and manual deployment of GitHub repositories directly to your cPanel server. Designed for simplicity and security, it streamlines your development workflow by syncing changes via webhooks or on-demand pulls.
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 
----
+A WHM plugin that keeps cPanel account directories in sync with GitHub repositories. Once a repository is configured, every push to GitHub can be deployed automatically through a webhook, or pulled on demand from the cPanel interface.
 
-## 🚀 Features
+Documentation: [developers.zactonz.com/cpanel-whm/zctzgit](https://developers.zactonz.com/cpanel-whm/zctzgit/)
 
-- ⚡ **Automatic Deployment** via GitHub webhooks
-- 🔒 **Supports Private Repositories** using token authentication
-- 🔁 **Manual Deployment** via UI
-- 📁 Deploy to **custom directory paths**
-- 🎨 Seamless integration with cPanel (Jupiter theme)
-- 🧩 **No third-party dependencies**
-- 🛡️ Secure and production-ready
+## What it does
 
----
+- Automatic deployment from GitHub on every push, via a per-repository webhook URL
+- Manual sync with one click when you want to control timing
+- Private repositories through GitHub access tokens
+- Any target directory inside the account, such as `public_html` or a subfolder
+- Multiple repositories per account, each with its own branch and path
+- No dependencies beyond Git itself
+- Installs into the cPanel Jupiter theme under the **Files** group
 
-## 📥 Installation
+## Requirements
 
-### 🛠 Requirements
+| Component | Minimum |
+|---|---|
+| WHM / cPanel | 106 or newer, Jupiter theme |
+| Git | 2.18 or newer |
+| PHP | 7.2 or newer |
+| Web server | Apache, LiteSpeed or NGINX |
+| Access | Root, over SSH or WHM Terminal |
 
-- WHM/cPanel server (Jupiter theme)
-- WHM version 106+
-- Git 2.18+ installed
-- PHP 7.2+
-- Apache, LiteSpeed, or NGINX
-- **Root access** to the server
+Tested on CentOS 7 and 8, AlmaLinux 8 and 9, Rocky Linux and CloudLinux OS. The server needs outbound HTTPS to github.com, and GitHub must be able to reach the account's domain over HTTPS if webhooks are used. The PHP `exec` function must be enabled for the account.
 
-### ✅ Compatible Operating Systems
+## Install
 
-- CentOS 7 / 8
-- AlmaLinux 8 / 9
-- CloudLinux OS
-- Rocky Linux
-
-### ⚙ Quick Install via Terminal
-
-> Run the following command as `root` (via SSH or WHM Terminal):
+Run as `root`:
 
 ```bash
 cd /root && wget -N https://packages.zactonz.com/cpanel/plugins/zctzgit/latest/zctzgit.tar.gz && tar -xzvf zctzgit.tar.gz && cd zctzgit && bash install.sh
 ```
 
-To uninstall:
+The installer copies the plugin into cPanel's plugin directory, registers it with the Jupiter theme and restarts the cPanel UI. Log in to any cPanel account and look for **Zactonz Git** under **Files**. If the icon does not appear straight away, log out and back in so the theme cache refreshes.
+
+To install from this repository instead of the package:
 
 ```bash
-cd /root/zctzgit && bash uninstall.sh
+git clone https://github.com/zactonz/zctzgit.git && cd zctzgit && bash install.sh
 ```
----
 
-## 🧑‍💻 How to Use
+### Update
 
-### ➕ Add a Repository
+Run the install command again. `wget -N` downloads the archive only when a newer version is published, and the installer replaces the plugin files in place. Configured repositories are kept.
 
-1. Go to your cPanel dashboard.  
-2. Locate **Zactonz Git** under the **Files** section.  
-3. Fill out the repository form:
-   - **Repository Name**
-   - **Clone URL**
-   - **Branch** (e.g., `main` or `master`)
-   - **Repository Path** (e.g., `public_html`)
-   - **Access Token** (only for private repos)
-   - Enable **Auto Sync** if needed  
-4. Click **Save & Deploy**  
+### Uninstall
 
-✅ Your repository is now cloned and deployed.
+From the extracted package directory:
 
----
+```bash
+bash uninstall.sh
+```
 
-### 🔁 Enable Auto Deployment (Webhook)
+This removes the plugin files and its cPanel registration. Cloned repositories inside account directories are left untouched.
 
-1. After saving a repository, locate it under **Configured Repositories**  
-2. Click the **Webhook** button  
-3. Copy the provided webhook URL  
-4. In your GitHub repository:  
-   - Go to **Settings → Webhooks → Add webhook**  
-   - Paste the URL  
-   - Set **Content-Type** to `application/json`  
-   - Choose **Push events**  
-   - Save the webhook  
+## Use
 
-Now, every push to GitHub will trigger automatic deployment on cPanel.
+### Add a repository
 
----
+1. Open cPanel and find **Zactonz Git** under **Files**.
+2. Fill in the form: repository name, clone URL, branch, repository path relative to the account home, an access token for private repositories, and whether to enable auto sync.
+3. Click **Save & Deploy**.
 
-### 🔄 Manual Deployment
+The repository is cloned into the chosen path and appears under **Configured repositories**.
 
-In the **Configured Repositories** section:
+![Add a repository](https://github.com/user-attachments/assets/3b273970-b0bb-426a-a379-a65489b7ae62)
 
-- Click **Sync now** to manually trigger a pull  
-- View the **Last sync** timestamp for status tracking  
+### Automatic deployment with a webhook
 
----
+1. In **Configured repositories**, click **Webhook** next to the repository and copy its URL.
+2. In GitHub open **Settings › Webhooks › Add webhook**.
+3. Paste the URL as the payload URL, set the content type to `application/json`, choose **Just the push event** and save.
 
-## Screenshots
-
-![Add new repository to zctzgit](https://github.com/user-attachments/assets/3b273970-b0bb-426a-a379-a65489b7ae62)
+Every push to the configured branch now runs `git pull` on the server. The **Last sync** column shows when the most recent deployment ran.
 
 ![Configured repositories](https://github.com/user-attachments/assets/d6f47c3e-790d-4bc2-89dc-ab5f66f5dc4e)
 
-Copy webhook URL from this popup for each of the repo and add to your Github webhooks.
 ![Webhook URL](https://github.com/user-attachments/assets/19e461b0-fd6f-4702-92b2-55af644bfe80)
 
+### Manual deployment
 
-## 🧩 Architecture & Plugin Package
+Click **Sync now** next to a repository to run `git pull` immediately. This works whether or not auto sync is enabled.
 
-- cPanel UI (Jupiter theme)  
-- Backend PHP deployment logic  
-- `install.sh` and `uninstall.sh` scripts  
-- Uses native `git` and cPanel API  
-- Does not rely on any external services or packages  
+## Package layout
 
----
+```
+_plugin.yaml, install.json   cPanel registration
+index.live.php               cPanel interface (Jupiter)
+actions.php, deploy.php      form handling and deployment
+webhook.php                  GitHub webhook receiver
+includes/                    Git helpers and configuration
+install.sh, uninstall.sh     installer and remover (run as root)
+```
 
-## 💼 Developed By
+The plugin uses the system `git` binary and the cPanel API. It calls no external service.
 
-**Zactonz Technologies**  
-🌐 [https://zactonz.com](https://zactonz.com)
+## Contributing
 
----
+Bug reports and pull requests are welcome. Please review the code before running it on a production server; it is provided as is, without warranty.
 
-## 🆓 License & Usage
+## License
 
-**Zactonz Git is free and open source.**
+[Apache License 2.0](LICENSE). Use it on your own servers, modify it, and redistribute or white-label it under the terms of that license.
 
-You are free to:
-
-- Use it on your own servers  
-- Modify or extend the code  
-- Repackage, resell, or white-label it under your own brand  
-
-> ⚠️ Provided as-is with no warranties. Use at your own risk.  
-> 🔍 Always review the code before using in production.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Feel free to fork the repo, open issues, or submit pull requests.  
-
----
-
-## 📎 Useful Links
-
-- [Official Website](https://developers.zactonz.com/whm-cpanel/zctzgit/docs/)
-- [cPanel Plugin Documentation](https://docs.cpanel.net)  
-- [GitHub Webhooks Guide](https://docs.github.com/en/webhooks)
+Built by [Zactonz Technologies](https://zactonz.com).

@@ -6,7 +6,7 @@
  * It will actually pull and sync the repo which is hit the Github
  * only if it has auto sync enabled by the admin.
  *
- * @author Team Zactonz
+ * @author Zactonz Technologies
  * @copyright Zactonz Technologies
  * @link https://zactonz.com/
  * @version 1.0
