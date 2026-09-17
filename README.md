@@ -35,14 +35,10 @@ The webhook receiver is served from the account's document root and relies on `.
 Run as `root`:
 
 ```bash
-cd /root && curl -fsSLO https://github.com/zactonz/zctzgit/releases/latest/download/zctzgit.tar.gz && tar -xzf zctzgit.tar.gz && cd zctzgit && bash install.sh
+cd /root && mkdir -p zctzgit && curl -fsSL https://github.com/zactonz/zctzgit/archive/refs/tags/v1.0.1.tar.gz | tar -xz -C zctzgit --strip-components=1 && cd zctzgit && bash install.sh
 ```
 
-Each release is published with a `zctzgit.tar.gz.sha256` file. To verify the download before running the installer:
-
-```bash
-curl -fsSLO https://github.com/zactonz/zctzgit/releases/latest/download/zctzgit.tar.gz.sha256 && sha256sum -c zctzgit.tar.gz.sha256
-```
+GitHub names its archives after the tag, so `--strip-components=1` puts the files straight into `zctzgit/` whichever version you download. Check [Releases](https://github.com/zactonz/zctzgit/releases) for the current tag.
 
 The installer copies the plugin into cPanel's plugin directory, registers it with the Jupiter theme and restarts the cPanel UI. Log in to any cPanel account and look for **Zactonz Git** under **Files**. If the icon does not appear straight away, log out and back in so the theme cache refreshes.
 
@@ -54,7 +50,7 @@ git clone https://github.com/zactonz/zctzgit.git && cd zctzgit && bash install.s
 
 ### Update
 
-Download the current release and run the installer again. It replaces the plugin files in place and removes files left by the previous version. Configured repositories live in each account's home directory and are kept.
+Download the current release and run the installer again, with the new tag in the URL. It replaces the plugin files in place and removes files left by the previous version. Configured repositories live in each account's home directory and are kept.
 
 Release notes for every version are in [CHANGELOG.md](CHANGELOG.md).
 

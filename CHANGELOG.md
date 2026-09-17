@@ -62,9 +62,8 @@ not run. They are fixed here so that they are not reachable in 1.0.1 either.
 
 ### Changed
 
-- Downloads have moved to GitHub Releases, with a SHA-256 checksum published
-  beside each archive. The install and update commands documented previously
-  pointed at a host that did not resolve, and therefore failed.
+- Downloads have moved to GitHub. The install and update commands documented
+  previously pointed at a host that did not resolve, and therefore failed.
 
 ## [1.0.0] - 2025-06-02
 
