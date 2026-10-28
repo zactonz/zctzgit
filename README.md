@@ -54,8 +54,6 @@ Download the current release and run the installer again, with the new tag in th
 
 Release notes for every version are in [CHANGELOG.md](CHANGELOG.md).
 
-> **Upgrading from 1.0.0:** version 1.0.0 contained syntax errors that prevented it from running at all, so it has no saved state to preserve. Install 1.0.1 over it.
-
 ### Uninstall
 
 From the extracted package directory:
