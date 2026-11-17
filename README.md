@@ -80,8 +80,6 @@ This removes the plugin files and its cPanel registration. Cloned repositories i
 
 The repository is cloned into the chosen path and appears under **Configured repositories**.
 
-![Add a repository](https://github.com/user-attachments/assets/3b273970-b0bb-426a-a379-a65489b7ae62)
-
 ### Automatic deployment with a webhook
 
 1. In **Configured repositories**, click **Webhook** next to the repository and copy its URL.
@@ -89,10 +87,6 @@ The repository is cloned into the chosen path and appears under **Configured rep
 3. Paste the URL as the payload URL, set the content type to `application/json`, choose **Just the push event** and save.
 
 Every push to the configured branch now runs `git pull` on the server. The **Last sync** column shows when the most recent deployment ran.
-
-![Configured repositories](https://github.com/user-attachments/assets/d6f47c3e-790d-4bc2-89dc-ab5f66f5dc4e)
-
-![Webhook URL](https://github.com/user-attachments/assets/19e461b0-fd6f-4702-92b2-55af644bfe80)
 
 ### Manual deployment
 
