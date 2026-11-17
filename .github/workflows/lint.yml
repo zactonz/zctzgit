@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ["7.2", "7.4", "8.1", "8.2", "8.3", "8.4", "8.5"]
+        php: ["8.1", "8.2", "8.3", "8.4", "8.5"]
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -30,6 +30,22 @@ jobs:
             fi
           done < <(find . -type f -name '*.php' -not -path './.git/*')
           exit $status
+
+  tests:
+    name: Tests (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.1", "8.2", "8.3", "8.4", "8.5"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Run the suite with every diagnostic on
+        run: php -d error_reporting=E_ALL -d display_errors=1 tests/run.php
 
   shell:
     name: Shell syntax
