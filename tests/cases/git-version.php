@@ -34,6 +34,20 @@ return static function (TestRun $t): void {
     $t->assert('unserviced is not usable', !GitVersionStatus::Unserviced->isUsable());
     $t->assert('vulnerable is still usable', GitVersionStatus::Vulnerable->isUsable());
 
+    $t->assert(
+        'the unserviced message warns about distribution backports rather than asserting a verdict',
+        str_contains(
+            GitVersionStatus::Unserviced->message(GitVersion::parse('git version 2.43.7')),
+            'backport',
+        ),
+    );
+
+    $t->same(
+        'a RHEL-style backported build still parses',
+        '2.43.7',
+        (string) GitVersion::parse('git version 2.43.7'),
+    );
+
     $vulnerable = GitVersion::parse('git version 2.56.0');
     $t->assert(
         'the vulnerable message names the release to upgrade to',

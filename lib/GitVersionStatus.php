@@ -25,7 +25,9 @@ enum GitVersionStatus
                 (string) $version->patchedRelease(),
             ),
             self::Unserviced => sprintf(
-                'Git %s no longer receives security fixes. Update to 2.50.2 or newer.',
+                'Git %s is from a series that upstream no longer services. Some distributions backport '
+                . 'fixes without changing the version, so check with yours before assuming it is unpatched; '
+                . 'otherwise update to 2.50.2 or newer.',
                 $version,
             ),
         };

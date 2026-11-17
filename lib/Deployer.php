@@ -132,7 +132,7 @@ final class Deployer
 
         $message = $status->message($this->git->version);
 
-        if ($status === GitVersionStatus::Unserviced || $this->config->blockUnpatchedGit) {
+        if ($this->config->blockUnpatchedGit) {
             throw new RuntimeException($message);
         }
 
