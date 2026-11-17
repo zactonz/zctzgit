@@ -3,6 +3,58 @@
 All notable changes to Zactonz Git are recorded here. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - unreleased
+
+A rewrite of everything behind the interface. Configuration from 1.0.x is
+migrated automatically the first time the new version reads it.
+
+### Added
+
+- Deploy keys, generated on the server with the private half never leaving it.
+  The public key is shown for pasting into the repository's own settings.
+- Deployment logs per repository, visible in the interface.
+- A safe mode that refuses to overwrite local modifications, and a force mode
+  that resets to the remote, with a per-repository list of files to keep.
+- Support for any Git host a server permits, not GitHub alone. The list lives
+  in `/etc/zctzgit/config.json`, together with whether access tokens are
+  allowed and whether unpatched Git blocks a deployment or only warns.
+- A Git version check against the November 2026 security release, shown in the
+  interface and applied before every deployment.
+- A test suite that runs under `E_ALL` on PHP 8.1 through 8.5 in CI.
+
+### Changed
+
+- Deployment uses init, fetch and a forced checkout instead of clone or pull,
+  so it works in a directory that already has files in it. 1.0.x used
+  `git clone` and could not deploy into a populated `public_html`.
+- Automatic deployment is driven by a poller that runs every five minutes and
+  acts only when the remote has moved. The PHP gateway 1.0.x wrote into the
+  account's document root is gone, along with its `.htaccess` dependency.
+- Webhooks verify `X-Hub-Signature-256` over the raw body, match the branch,
+  answer a ping and reject a repeated delivery. They are now optional.
+- Repositories are identified by a generated id rather than their position in
+  a list, so deleting one cannot make another action target the wrong one.
+- Failures are reported in words. An expired token, a rejected deploy key, a
+  missing branch and an unreachable host each say so.
+- Minimum PHP is 8.1; minimum cPanel & WHM is 134 LTS.
+
+### Security
+
+- Credentials are handed to Git at run time through an askpass helper or
+  `GIT_SSH_COMMAND`. Nothing is written into `.git/config`, where 1.0.x left a
+  token readable over the web whenever a repository was deployed into a
+  document root.
+- Tokens are stored under AES-256-GCM with a per-account random key at 0600,
+  replacing unauthenticated AES-CBC keyed on the account name, which is public.
+- Submodules are never fetched and recursion is disabled on the repository and
+  on every invocation, which keeps CVE-2026-111760 out of reach.
+- Clone URLs are rejected if they use the `ext` transport, look like a command
+  argument, carry inline credentials or contain newlines.
+- Every deployment takes a per-repository lock, so concurrent runs cannot act
+  on one working tree at once.
+- Git arguments are passed to `proc_open` as an array, so no value reaches a
+  shell.
+
 ## [1.0.1] - 2026-09-17
 
 A corrective release. Version 1.0.0 could not run: two source files contained

@@ -1,6 +1,6 @@
 # Zactonz Git
 
-![Version](https://img.shields.io/badge/version-1.0.1-blue.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)
 
 A WHM plugin that keeps cPanel account directories in sync with GitHub repositories. Once a repository is configured, every push to GitHub can be deployed automatically through a webhook, or pulled on demand from the cPanel interface.
 
@@ -22,8 +22,7 @@ Documentation: [developers.zactonz.com/cpanel-whm/zctzgit](https://developers.za
 |---|---|
 | cPanel & WHM | 134 (LTS) or newer, Jupiter theme |
 | Git | 2.56.1, or the patched release in your series |
-| PHP | 7.2 or newer |
-| Web server | Apache or LiteSpeed |
+| PHP | 8.1 or newer |
 | Access | Root, over SSH or WHM Terminal |
 
 Tested on CentOS 7 and 8, AlmaLinux 8 and 9, Rocky Linux and CloudLinux OS. The server needs outbound HTTPS to github.com, and GitHub must be able to reach the account's domain over HTTPS if webhooks are used. The PHP `exec` function must be enabled for the account.
@@ -34,7 +33,7 @@ Zactonz Git never clones recursively and never fetches submodules, so the recurs
 
 The installer registers the plugin with Jupiter only. Accounts on **Meridian**, the goal-based theme introduced in version 138, will not see it.
 
-The webhook receiver is served from the account's document root and relies on `.htaccess`, so automatic deployment requires Apache or LiteSpeed. Manual sync works on any web server.
+Automatic deployment is driven by a poller that runs from cron every five minutes, so it works on any web server and on servers that are not reachable from the internet. Webhooks are optional and verify their signature.
 
 ## Install
 
