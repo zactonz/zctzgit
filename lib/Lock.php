@@ -6,7 +6,6 @@ namespace Zactonz\Git;
 
 final class Lock
 {
-    /** @var resource|null */
     private $handle = null;
 
     private function __construct(private readonly string $file)

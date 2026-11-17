@@ -9,6 +9,6 @@
     "featuremanager": 1,
     "order": 100,
     "target": "cPanel",
-    "description": "Auto-pull GitHub repos and deploy securely."
+    "description": "Deploy Git repositories into this account, automatically or on demand."
   }
 ]

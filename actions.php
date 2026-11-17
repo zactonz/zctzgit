@@ -1,70 +1,131 @@
 <?php
-/**
- * Zactonz Git Plugin - Repository Actions
- *
- * This script handles various actions related to the management of GitHub repositories
- * in the Zactonz Git plugin, such as toggling auto-sync, deleting repositories, and
- * manually syncing repositories.
- *
- * @author Zactonz Technologies
- * @copyright Zactonz Technologies
- * @link https://zactonz.com/
- * @version 1.0.1
- */
 
-define('PLUGIN_BASE_DIR', '/usr/local/cpanel/base/frontend/jupiter/zctzgit');
-require_once PLUGIN_BASE_DIR . '/includes/git-config.php';
-require_once PLUGIN_BASE_DIR . '/includes/git-helper.php';
+declare(strict_types=1);
 
-$username = getenv('USER');
-if (!$username) { die("Could not determine cPanel username."); }
+require_once __DIR__ . '/lib/autoload.php';
 
-$config = new ZctzGitConfig($username);
+use Zactonz\Git\App;
+use Zactonz\Git\CredentialType;
+use Zactonz\Git\DeployMode;
+use Zactonz\Git\RemoteUrl;
+use Zactonz\Git\Repository;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $action = $_POST['action'];
-    $index = isset($_POST['index']) ? (int)$_POST['index'] : -1;
+header('Content-Type: application/json');
+header('X-Content-Type-Options: nosniff');
 
+function respond(bool $ok, string $message, array $extra = []): never
+{
+    if (!$ok) {
+        http_response_code(400);
+    }
+
+    echo json_encode(array_merge(['ok' => $ok, 'message' => $message], $extra), JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    respond(false, 'This endpoint accepts POST requests only.');
+}
+
+try {
+    $app = App::forAccount(__DIR__);
+} catch (Throwable $e) {
+    respond(false, $e->getMessage());
+}
+
+$action = (string) ($_POST['action'] ?? '');
+$id = (string) ($_POST['id'] ?? '');
+
+try {
     switch ($action) {
-        case 'toggle_sync':
-            $repos = $config->getReposConfig();
-            if (isset($repos[$index])) {
-                $repos[$index]['auto_sync'] = (bool)$_POST['status'];
-                $config->updateRepo($index, $repos[$index]);
-                echo "Success";
+        case 'add':
+            $url = trim((string) ($_POST['url'] ?? ''));
+            $remote = RemoteUrl::parse($url, $app->config);
+            $target = $app->paths->resolveTarget((string) ($_POST['path'] ?? ''));
+            $token = trim((string) ($_POST['token'] ?? ''));
+
+            $credential = match (true) {
+                (string) ($_POST['credential'] ?? '') === 'deploy_key' => CredentialType::DeployKey,
+                $token !== '' => CredentialType::Token,
+                default => CredentialType::None,
+            };
+
+            if ($credential === CredentialType::Token && !$app->config->allowTokens) {
+                respond(false, 'This server does not allow access tokens. Use a deploy key instead.');
             }
-            break;
 
-        case 'delete_repo':
-            $config->removeRepoConfig($index);
-            echo "Success";
-            break;
+            $repository = Repository::create(
+                trim((string) ($_POST['name'] ?? 'Untitled')) ?: 'Untitled',
+                $remote->withoutCredentials(),
+                trim((string) ($_POST['branch'] ?? 'main')) ?: 'main',
+                $target,
+                DeployMode::from_((string) ($_POST['mode'] ?? '')),
+                $credential,
+                (string) ($_POST['auto_sync'] ?? '') === '1',
+                array_values(array_filter(array_map('trim', explode("\n", (string) ($_POST['keep'] ?? ''))))),
+            );
 
-        case 'sync_repo':
-            $repos = $config->getReposConfig();
-            if (isset($repos[$index])) {
-                if (deployRepo($repos[$index])) {
-                    $repos[$index]['last_sync'] = time();
-                    $config->updateRepo($index, $repos[$index]);
-                    echo "Repository synced successfully!";
-                } else {
-                    http_response_code(500);
-                    echo "Failed to sync repository. Check logs for details.";
-                }
-            } else {
-                http_response_code(404);
-                echo "Repository configuration not found.";
+            if ($credential === CredentialType::Token) {
+                $app->credentials->storeToken($repository->id, $token);
             }
-            break;
 
-        case 'reinstall_gateway':
-            $config->getGatewayDirectory(true); // Force recreation of the gateway
-            echo "Webhook gateway has been reinstalled successfully.";
-            break;
+            $app->store->save($repository);
+
+            if ($credential === CredentialType::DeployKey) {
+                $public = $app->credentials->generateDeployKey(
+                    $app->runner,
+                    $repository->id,
+                    sprintf('zctzgit-%s-%s', $app->paths->username, $repository->name),
+                );
+
+                respond(true, 'Repository added. Add this deploy key to the repository, then deploy.', [
+                    'id' => $repository->id,
+                    'public_key' => $public,
+                ]);
+            }
+
+            respond(true, 'Repository added.', ['id' => $repository->id]);
+
+        case 'deploy':
+            $repository = $app->store->find($id);
+
+            if ($repository === null) {
+                respond(false, 'That repository no longer exists.');
+            }
+
+            $result = $app->deployer()->deploy($repository);
+            respond($result->ok, $result->summary, ['revision' => $result->revision]);
+
+        case 'toggle':
+            $repository = $app->store->find($id);
+
+            if ($repository === null) {
+                respond(false, 'That repository no longer exists.');
+            }
+
+            $app->store->save($repository->with(['auto_sync' => !$repository->autoSync]));
+            respond(true, $repository->autoSync ? 'Automatic deployment is off.' : 'Automatic deployment is on.');
+
+        case 'delete':
+            $app->credentials->forget($id);
+            $app->log($id)->clear();
+            respond($app->store->delete($id), $app->store->find($id) === null
+                ? 'Repository removed. The files on the server were left in place.'
+                : 'That repository no longer exists.');
+
+        case 'log':
+            if ($app->store->find($id) === null) {
+                respond(false, 'That repository no longer exists.');
+            }
+
+            respond(true, 'ok', ['log' => $app->log($id)->tail()]);
+
+        case 'public_key':
+            respond(true, 'ok', ['public_key' => $app->credentials->publicKey($id) ?? '']);
 
         default:
-            http_response_code(400);
-            echo "Invalid action.";
+            respond(false, 'Unknown action.');
     }
+} catch (Throwable $e) {
+    respond(false, $e->getMessage());
 }
-?>

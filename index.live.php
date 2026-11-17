@@ -1,334 +1,247 @@
 <?php
-/**
- * Zactonz Git Plugin for cPanel
- *
- * This is the main entry point for the Zactonz Git plugin, which is designed to
- * integrate with cPanel and provide users with a convenient way to manage their
- * GitHub repositories.
- *
- * @author Zactonz Technologies
- * @copyright Zactonz Technologies
- * @link https://zactonz.com/
- * @version 1.0.1
- */
 
+declare(strict_types=1);
 
 require_once '/usr/local/cpanel/php/cpanel.php';
+require_once __DIR__ . '/lib/autoload.php';
 
-define('PLUGIN_BASE_DIR', '/usr/local/cpanel/base/frontend/jupiter/zctzgit');
-
-require_once PLUGIN_BASE_DIR . '/includes/git-config.php';
+use Zactonz\Git\App;
+use Zactonz\Git\CredentialType;
+use Zactonz\Git\DeployMode;
+use Zactonz\Git\GitVersionStatus;
 
 $cpanel = new CPANEL();
-
-$username = getenv('USER');
-if (!$username) { die("Could not determine cPanel username."); }
-
-$homeDir = rtrim(getenv('HOME') ?: "/home/{$username}", '/');
-$config = new ZctzGitConfig($username);
-$repos = $config->getReposConfig();
-$gatewayDir = $config->getGatewayDirectory();
-
 echo $cpanel->header('Zactonz Git');
+
+$app = App::forAccount(__DIR__);
+$repositories = $app->store->all();
+$git = $app->git();
+$version = $app->config->allowTokens;
+
+function e(?string $value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function when(?int $timestamp): string
+{
+    if ($timestamp === null) {
+        return 'Never';
+    }
+
+    return (new DateTimeImmutable('@' . $timestamp))
+        ->setTimezone(new DateTimeZone(date_default_timezone_get()))
+        ->format('j M Y, g:i a');
+}
 ?>
-<style>
-    .info-block { margin-top: 0; margin-bottom: 5px; }
-    .btn-group .btn { margin-right: 5px; }
-    .zctz-flx{ display:flex; flex-wrap: wrap; gap:5px; }
-    a.list-group-item{ color: #428bca; }
-    .zctz-rule{ margin-top:20px; padding:0; }
-</style>
+<link rel="stylesheet" href="assets/zctzgit.css">
 
-<div class="row">
-    <div class="col-xs-12">
-        <div class="description">
-            Use this interface to automatically pull/clone existing remote repositories.
-            To add an existing repository to the list of Zactonz Git repositories, select that repository path when you pull the repository.
-        </div>
-        <div class="row">
-            <div class="col-xs-12 col-sm-6">
-                <h4>Add New Repository</h4>
-                <form action="deploy.php" method="POST">
+<div id="zctz" class="zctz-wrap">
+    <div class="description">
+        Deploy a Git repository into a directory in this account. Changes are pulled automatically
+        on a schedule when automatic deployment is on, or whenever you choose Deploy now.
+    </div>
+
+    <div id="zctz-notice" class="zctz-note zctz-hide"></div>
+
+<?php if ($git === null): ?>
+    <div class="zctz-note zctz-note--error">
+        Git was not found on this server. Ask your administrator to install it.
+    </div>
+<?php else: ?>
+    <?php $status = $git->status(); ?>
+    <?php if ($status !== GitVersionStatus::Supported): ?>
+    <div class="zctz-note zctz-note--<?= $status === GitVersionStatus::Unserviced ? 'error' : 'warn' ?>">
+        <?= e($status->message($git->version)) ?>
+    </div>
+    <?php endif; ?>
+    <p class="zctz-env">Using <?= e($git->describe()) ?></p>
+<?php endif; ?>
+
+    <div class="zctz-grid">
+        <div class="zctz-grid__main">
+            <h4>Add a repository</h4>
+            <form id="zctz-add">
+                <input type="hidden" name="action" value="add">
+
                 <div class="form-group">
-                  <label>Repository Name</label>
-                    <span class="info-block">
-                        <span>Enter the desired path for the repository's directory that you want to pull automatically</span>
+                    <label for="zctz-name">Name</label>
+                    <input id="zctz-name" name="name" type="text" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="zctz-url">Clone URL</label>
+                    <input id="zctz-url" name="url" type="text" class="form-control" required
+                           placeholder="https://github.com/owner/repository">
+                    <span class="help-block">
+                        Allowed hosts: <?= e(implode(', ', $app->config->allowedHosts)) ?>.
+                        Use an https:// or git@ URL.
                     </span>
-                  <input type="text" name="repo_name" class="form-control" required>
                 </div>
+
                 <div class="form-group">
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-12">
-                            <label>Clone URL</label>
-                            <span class="info-block">
-                                <span>Enter the clone URL for the remote repository. All clone URLs must begin with the http:// or https://</span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-12">
-                            <input type="url" name="repo_url" class="form-control" required>
-                        </div>
-                    </div>
+                    <label for="zctz-branch">Branch</label>
+                    <input id="zctz-branch" name="branch" type="text" class="form-control" value="main" required>
                 </div>
+
                 <div class="form-group">
-                  <label>Branch</label>
-                  <input type="text" name="repo_branch" class="form-control" value="main">
+                    <label for="zctz-path">Directory</label>
+                    <div class="input-group">
+                        <span class="input-group-addon"><?= e($app->paths->home) ?>/</span>
+                        <input id="zctz-path" name="path" type="text" class="form-control" required
+                               placeholder="public_html">
+                    </div>
+                    <span class="help-block">
+                        The directory does not have to be empty. It is created if it does not exist.
+                    </span>
                 </div>
+
                 <div class="form-group">
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-12">
-                            <div class="toggle-info-label-container" for="repoPathField" label-text="Repository Path" show-info-block="true">
-                                <label id="lblrepoPathFieldLabel11" for="repoPathField">
-                                    Repository Path
-                                </label>
-                                <span class="info-block">
-                                    <span>Enter the desired path for the repository's directory.
-                                    If you enter a path that does not exist, the system will create the directory when it creates or clones the repository.
-                                    </span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div id="repoPathFieldSegment" class="col-xs-12">
-                            <div class="input-group">
-                                <span class="input-group-addon truncate">
-                                    <span uib-tooltip="<?php echo htmlspecialchars($homeDir, ENT_QUOTES); ?>/" class="home-dir-text"><?php echo htmlspecialchars($homeDir, ENT_QUOTES); ?>/</span>
-                                    <span class="sr-only">
-                                        Enter a valid directory path, relative to your home directory.
-                                    </span>
-                                </span>
-                                <input name="repo_destination_path" type="text" class="form-control" autocomplete="new-path" required="" pattern="[^'&quot;:\\*?<>|@&amp;=%#`$(){};\[\]\s]+" aria-autocomplete="list" aria-expanded="false" role="combobox">
-                            </div>
-                            <span class="help-block">
-                                The path cannot contain the "./" and "../" directory references, whitespace, or the following characters: \ * | " ' &lt; &gt; &amp; @ ` $ { } [ ] ( ) ; ? : = % #
-                            </span>
-                        </div>
-                    </div>
+                    <label for="zctz-credential">Access</label>
+                    <select id="zctz-credential" name="credential" class="form-control">
+                        <option value="none">Public repository, no credential</option>
+<?php if ($app->config->allowTokens): ?>
+                        <option value="token">Private, using an access token</option>
+<?php endif; ?>
+                        <option value="deploy_key">Private, using a deploy key generated here</option>
+                    </select>
+                    <span class="help-block">
+                        A deploy key never leaves this server. An access token is stored encrypted and
+                        is handed to Git only while a deployment runs.
+                    </span>
                 </div>
+
+                <div class="form-group zctz-hide" id="zctz-token-field">
+                    <label for="zctz-token">Access token</label>
+                    <input id="zctz-token" name="token" type="password" class="form-control"
+                           autocomplete="new-password">
+                </div>
+
                 <div class="form-group">
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-12">
-                            <label>Access Token (for private repo)</label>
-                            <span id="toggleLabelInfo14infoText17" class="info-block">
-                                <span>You can get it from Github <a href="https://github.com/settings/personal-access-tokens/" noreferrer target="_blank">Personal access tokens</a></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-12">
-                            <input type="password" name="github_token" class="form-control" autocomplete="new-password">
-                            <span class="help-block">Leave empty for public repositories. For private ones, the token needs read access to code, metadata, pull requests and the repository.</span>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-12">
-                            <label><input type="checkbox" name="auto_sync" checked> Enable Auto Sync (via Webhook)</label>
-                            <span class="help-block">Auto syncing as soon as Git updated at Github</span>
-                        </div>
-                    </div>
+                    <label for="zctz-mode">If the directory has local changes</label>
+                    <select id="zctz-mode" name="mode" class="form-control">
+                        <option value="safe"><?= e(DeployMode::Safe->label()) ?></option>
+                        <option value="force"><?= e(DeployMode::Force->label()) ?></option>
+                    </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Save & Deploy</button>
-              </form>
-            </div>
-            <div class="col-xs-12 col-sm-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h3 class="panel-title">Related Links</h3>
-                    </div>
-                    <div class="list-group">
-                      <a href="https://github.com/settings/personal-access-tokens/" class="list-group-item list-group-item-action" noreferrer target="_blank" uib-tooltip="Manage your PAT.">
-                         <i class="fas fa-external-link-alt" aria-hidden="true"></i>
-                         Github Personal access tokens
-                      </a>
-                      <a href="https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks" class="list-group-item list-group-item-action" noreferrer target="_blank" uib-tooltip="Webhooks">
-                         <i class="fas fa-external-link-alt" aria-hidden="true"></i>
-                         Creating webhooks at Github
-                      </a>
-                    </div>
+
+                <div class="form-group">
+                    <label for="zctz-keep">Files to keep, one per line</label>
+                    <textarea id="zctz-keep" name="keep" class="form-control" rows="2"
+                              placeholder=".env"></textarea>
+                    <span class="help-block">These are restored after a forced deployment.</span>
+                </div>
+
+                <div class="form-group">
+                    <label><input type="checkbox" name="auto_sync" value="1" checked> Deploy automatically</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Add repository</button>
+            </form>
+        </div>
+
+        <div class="zctz-grid__side">
+            <div class="panel panel-default">
+                <div class="panel-heading"><h3 class="panel-title">Deploy keys and tokens</h3></div>
+                <div class="list-group">
+                    <a class="list-group-item" target="_blank" rel="noreferrer"
+                       href="https://github.com/settings/personal-access-tokens/">GitHub access tokens</a>
+                    <a class="list-group-item" target="_blank" rel="noreferrer"
+                       href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys">Using deploy keys</a>
                 </div>
             </div>
         </div>
-        <div class="col-xs-12 zctz-rule">
-            <hr/>
+    </div>
+
+    <hr class="zctz-rule">
+
+    <h3>Repositories</h3>
+
+    <table class="table table-striped zctz-table">
+        <thead>
+            <tr>
+                <th>Repository</th>
+                <th>Automatic</th>
+                <th>Last deployment</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+<?php if ($repositories === []): ?>
+            <tr><td colspan="4">No repositories yet.</td></tr>
+<?php endif; ?>
+<?php foreach ($repositories as $repository): ?>
+            <tr>
+                <td>
+                    <strong><?= e($repository->name) ?></strong><br>
+                    <span class="zctz-muted">
+                        <?= e($repository->url) ?> · <?= e($repository->branch) ?><br>
+                        <?= e($app->paths->relativise($repository->targetDir)) ?>
+                        · <?= e($repository->mode === DeployMode::Force ? 'force' : 'safe') ?>
+                        · <?= e(match ($repository->credentialType) {
+                            CredentialType::None => 'public',
+                            CredentialType::Token => 'token',
+                            CredentialType::DeployKey => 'deploy key',
+                        }) ?>
+                    </span>
+                </td>
+                <td>
+                    <span class="label label-<?= $repository->autoSync ? 'success' : 'default' ?>">
+                        <?= $repository->autoSync ? 'On' : 'Off' ?>
+                    </span>
+                </td>
+                <td>
+                    <?= e(when($repository->lastSync)) ?>
+<?php if ($repository->lastStatus === 'failed'): ?>
+                    <br><span class="label label-danger">Failed</span>
+<?php endif; ?>
+                </td>
+                <td>
+                    <div class="zctz-actions">
+                        <button type="button" class="btn btn-xs btn-primary"
+                                data-zctz-action="deploy" data-zctz-id="<?= e($repository->id) ?>">Deploy now</button>
+                        <button type="button" class="btn btn-xs btn-default"
+                                data-zctz-action="log" data-zctz-id="<?= e($repository->id) ?>">Log</button>
+<?php if ($repository->credentialType === CredentialType::DeployKey): ?>
+                        <button type="button" class="btn btn-xs btn-default"
+                                data-zctz-action="key" data-zctz-id="<?= e($repository->id) ?>">Deploy key</button>
+<?php endif; ?>
+                        <button type="button" class="btn btn-xs btn-default"
+                                data-zctz-action="toggle" data-zctz-id="<?= e($repository->id) ?>">
+                            <?= $repository->autoSync ? 'Turn off' : 'Turn on' ?>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-danger"
+                                data-zctz-action="delete" data-zctz-id="<?= e($repository->id) ?>">Remove</button>
+                    </div>
+                </td>
+            </tr>
+<?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <div id="zctz-log" class="panel panel-default zctz-panel zctz-hide">
+        <div class="panel-heading">
+            <h3 class="panel-title">Deployment log
+                <button type="button" class="btn btn-xs btn-default pull-right" data-zctz-action="close">Close</button>
+            </h3>
         </div>
-        <div class="row">
-            <div class="col-xs-12">
-                <h3>Configured Repositories</h3>
-                <button class="btn btn-default pull-right" onclick="reinstallGateway()" title="Recreate the webhook gateway directory in your public_html folder if it gets deleted.">
-                    <i class="fas fa-sync"></i> Repair Webhook Gateway
-                </button>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Repository</th>
-                            <th>Auto sync</th>
-                            <th>Last sync</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($repos)): ?>
-                            <tr><td colspan="4">No repositories configured yet.</td></tr>
-                        <?php endif; ?>
-                        <?php foreach ($repos as $index => $repo): ?>
-                            <tr>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($repo['repo_name'] ?? 'N/A'); ?></strong><br>
-                                    <small>Path: <?php echo htmlspecialchars(str_replace($homeDir, '', $repo['destination_dir'] ?? ''), ENT_QUOTES); ?></small>
-                                </td>
-                                <td>
-                                    <span class="label label-<?php echo $repo['auto_sync'] ? 'success' : 'warning'; ?>">
-                                        <?php echo $repo['auto_sync'] ? 'On' : 'Off'; ?>
-                                    </span>
-                                </td>
-                                <td><?php 
-                                $timestamp = $repo['last_sync'] ?? null;
+        <div class="panel-body"><pre id="zctz-log-output" class="zctz-log"></pre></div>
+    </div>
 
-                                if ($timestamp !== null) {
-
-                                    $serverTimezone = date_default_timezone_get(); 
-                                    
-                                    $dt = new DateTime('@' . $timestamp);  // The '@' symbol ensures the timestamp is treated as UTC
-
-                                    $dt->setTimezone(new DateTimeZone($serverTimezone));
-
-                                    echo $dt->format('M j, Y, g:i a');
-                                    
-                                } else {
-                                    echo 'Never';
-                                }
-                                ?></td>
-                                <td>
-                                    <div class="btn-group zctz-flx">
-                                        <button class="btn btn-xs btn-primary" onclick="syncNow(<?php echo $index; ?>)">Sync Now</button>
-                                        <button class="btn btn-xs btn-info" onclick="showWebhookUrl('<?php echo htmlspecialchars($_SERVER['HTTP_HOST'] ?? '', ENT_QUOTES); ?>', '<?php echo htmlspecialchars($gatewayDir, ENT_QUOTES); ?>', '<?php echo htmlspecialchars($repo['repo_secret_id'] ?? '', ENT_QUOTES); ?>')">Webhook</button>
-                                        <button class="btn btn-xs btn-<?php echo $repo['auto_sync'] ? 'warning' : 'success'; ?>" onclick="toggleAutoSync(<?php echo $index; ?>, <?php echo $repo['auto_sync'] ? '0' : '1'; ?>)">
-                                            <?php echo $repo['auto_sync'] ? 'Disable' : 'Enable'; ?>
-                                        </button>
-                                        <button class="btn btn-xs btn-danger" onclick="deleteRepo(<?php echo $index; ?>)">Delete</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+    <div id="zctz-key" class="panel panel-default zctz-panel zctz-hide">
+        <div class="panel-heading">
+            <h3 class="panel-title">Deploy key
+                <button type="button" class="btn btn-xs btn-default pull-right" data-zctz-action="close">Close</button>
+            </h3>
+        </div>
+        <div class="panel-body">
+            <p>Add this public key to the repository on its host, with read access.</p>
+            <code id="zctz-key-output" class="zctz-key"></code>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="webhookModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">Webhook URL</h4>
-      </div>
-      <div class="modal-body">
-        <p>Use this URL in your GitHub repository's webhook settings (Content type: <code>application/json</code>):</p>
-        <input type="text" id="webhookUrlInput" class="form-control" readonly>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-function showWebhookUrl(domain, gatewayDir, repoSecret) {
-    var webhookUrl = window.location.protocol + "//" + domain + "/" + gatewayDir + "/" + repoSecret;
-    document.getElementById('webhookUrlInput').value = webhookUrl;
-    var zctzPop = document.getElementById('webhookModal');
-    zctzPop.classList.add('in', 'show');
-}
-
-function closeWebhookModal() {
-    const zctzPop = document.getElementById('webhookModal');
-    zctzPop.classList.remove('in', 'show');
-}
-
-// Close modal when clicking on the 'x' close button
-document.querySelector('#webhookModal .close').addEventListener('click', closeWebhookModal);
-
-// Close modal when clicking outside the modal content (on the backdrop)
-window.addEventListener('click', function(event) {
-    const modalElement = document.getElementById('webhookModal');
-    if (event.target === modalElement) {
-        closeWebhookModal();
-    }
-});
-
-function reinstallGateway() {
-    if (confirm('This will recreate the main webhook gateway directory in your public_html folder. This is useful if it was accidentally deleted. Continue?')) {
-        fetch('actions.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({ action: 'reinstall_gateway' })
-        })
-        .then(response => response.text())
-        .then(response => {
-            alert(response);
-            window.location.reload();
-        })
-        .catch(() => {
-            alert('An error occurred.');
-        });
-    }
-}
-
-function syncNow(index) {
-    if (confirm('Are you sure you want to manually sync this repository now?')) {
-        fetch('actions.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({ action: 'sync_repo', index: index })
-        })
-        .then(response => response.text())
-        .then(response => {
-            alert(response);
-            location.reload();
-        })
-        .catch(xhr => {
-            alert('Error: ' + xhr.responseText);
-        });
-    }
-}
-
-function toggleAutoSync(index, status) {
-    fetch('actions.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({ action: 'toggle_sync', index: index, status: status })
-    })
-    .then(() => {
-        location.reload();
-    });
-}
-
-function deleteRepo(index) {
-    if (confirm('Are you sure you want to delete this repository configuration? The files on your server will not be deleted.')) {
-        fetch('actions.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({ action: 'delete_repo', index: index })
-        })
-        .then(() => {
-            location.reload();
-        });
-    }
-}
-
-</script>
-
+<script src="assets/zctzgit.js"></script>
 <?php
 echo $cpanel->footer();
 $cpanel->end();
-?>

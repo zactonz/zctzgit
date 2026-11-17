@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# Runs the Zactonz Git poller for every cPanel account that has configured a
+# repository. Invoked by /etc/cron.d/zctzgit as root; each account's poll runs
+# as that account, never as root.
+
+set -uo pipefail
+
+PLUGIN_DIR="/usr/local/cpanel/base/frontend/jupiter/zctzgit"
+PHP="/usr/local/cpanel/3rdparty/bin/php"
+
+[ -x "$PHP" ] || PHP="$(command -v php || true)"
+[ -n "$PHP" ] || { echo "No PHP interpreter found." >&2; exit 1; }
+
+for config in /home*/*/.zctzgit/repos.json; do
+    [ -f "$config" ] || continue
+
+    home="${config%/.zctzgit/repos.json}"
+    account="$(basename "$home")"
+
+    id -u "$account" >/dev/null 2>&1 || continue
+
+    su -s /bin/bash -c "HOME='$home' USER='$account' '$PHP' '$PLUGIN_DIR/cron/poll.php'" "$account" 2>&1 \
+        | sed "s/^/[$account] /"
+done
+
+exit 0

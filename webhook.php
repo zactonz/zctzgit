@@ -1,90 +1,81 @@
 <?php
-/**
- * Zactonz Git Plugin - Webhook (backend)
- *
- * This webhook will be included at user/cPanel webhook file.
- * It will actually pull and sync the repo which is hit the Github
- * only if it has auto sync enabled by the admin.
- *
- * @author Zactonz Technologies
- * @copyright Zactonz Technologies
- * @link https://zactonz.com/
- * @version 1.0.1
- */
- 
- 
-// We need to make sure its run by parent file and its not hit directly.
-if (!defined('ZCTZGIT_WORKER')) { 
-    
-    http_response_code(403);
-    exit('Access denied.'); 
-    
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/lib/autoload.php';
+
+use Zactonz\Git\App;
+use Zactonz\Git\DeliveryLedger;
+use Zactonz\Git\Paths;
+use Zactonz\Git\WebhookRequest;
+
+header('Content-Type: text/plain');
+header('X-Content-Type-Options: nosniff');
+
+function finish(int $status, string $message): never
+{
+    http_response_code($status);
+    echo $message . "\n";
+    exit;
 }
 
-$repo_secret_id = $_SERVER['argv'][1] ?? null;
-
-if (!$repo_secret_id) { 
-    
-    http_response_code(400); 
-    
-    exit("Error: No repo secret ID provided."); 
-    
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    finish(405, 'This endpoint accepts POST requests only.');
 }
 
-$username = getenv('USER') ?: '';
+$body = (string) file_get_contents('php://input');
 
-if ($username === '' || $username === 'nobody') {
-    $candidatePaths = [
-        $_SERVER['SCRIPT_FILENAME'] ?? '',
-        $_SERVER['DOCUMENT_ROOT'] ?? '',
-    ];
-    foreach ($candidatePaths as $candidatePath) {
-        if ($candidatePath !== '' && preg_match('#^/home\d*/([^/]+)/#', $candidatePath, $matches)) {
-            $username = $matches[1];
-            break;
-        }
-    }
+if ($body === '' || strlen($body) > 2097152) {
+    finish(400, 'Unusable payload.');
 }
 
-if (($username === '' || $username === 'nobody') && function_exists('posix_geteuid')) {
-    $owner = posix_getpwuid(posix_geteuid());
-    if (!empty($owner['name']) && $owner['name'] !== 'nobody') {
-        $username = $owner['name'];
-    }
+$identifier = basename((string) ($_GET['repository'] ?? ''));
+
+if (preg_match('/^[0-9a-f]{32}$/', $identifier) !== 1) {
+    finish(404, 'Not found.');
 }
 
-if ($username === '' || $username === 'nobody') {
-    http_response_code(500);
-    exit("Server Error: Could not determine user context.");
+try {
+    $paths = Paths::fromRequest($_SERVER);
+    $app = App::forPaths($paths, __DIR__);
+} catch (Throwable) {
+    finish(404, 'Not found.');
 }
 
-require_once __DIR__ . '/includes/git-config.php';
-require_once __DIR__ . '/includes/git-helper.php';
+$repository = $app->store->find($identifier);
+$request = WebhookRequest::fromGlobals($_SERVER, $body);
 
-$config = new ZctzGitConfig($username);
-$repos = $config->getReposConfig();
-$repoToDeploy = null;
-$repoIndex = -1;
-
-foreach ($repos as $index => $repo) {
-    if (isset($repo['repo_secret_id']) && hash_equals($repo['repo_secret_id'], $repo_secret_id)) {
-        $repoToDeploy = $repo;
-        $repoIndex = $index;
-        break;
-    }
+if ($repository === null
+    || $repository->webhookSecret === null
+    || !$request->verify($repository->webhookSecret)) {
+    finish(404, 'Not found.');
 }
 
-if ($repoToDeploy && !empty($repoToDeploy['auto_sync'])) {
-    if (deployRepo($repoToDeploy)) {
-        $repoToDeploy['last_sync'] = time();
-        $config->updateRepo($repoIndex, $repoToDeploy);
-        echo "Deployment successful for: " . htmlspecialchars($repoToDeploy['repo_name']);
-    } else {
-        http_response_code(500);
-        echo "Deployment failed.";
-    }
-} else {
-    http_response_code(200);
-    echo "Request received, but repository not found or auto-sync is disabled.";
+if ($request->isPing()) {
+    finish(200, 'Zactonz Git is listening.');
 }
-?>
+
+if (!$request->isPush()) {
+    finish(202, 'Ignored: not a push event.');
+}
+
+if (!$request->matchesBranch($repository->branch)) {
+    finish(202, 'Ignored: a different branch.');
+}
+
+if (!$repository->autoSync) {
+    finish(202, 'Ignored: automatic deployment is off.');
+}
+
+if ((new DeliveryLedger($paths))->isReplay($request->deliveryId)) {
+    finish(200, 'Already handled.');
+}
+
+try {
+    $result = $app->deployer()->deploy($repository);
+} catch (Throwable $e) {
+    $app->log($repository->id)->append('Webhook failed: ' . $e->getMessage());
+    finish(500, 'Deployment failed.');
+}
+
+finish($result->ok ? 200 : 500, $result->ok ? $result->summary : 'Deployment failed.');

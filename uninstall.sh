@@ -1,37 +1,27 @@
 #!/bin/bash
 
-# Zactonz Git Plugin - Uninstallation Script
-#
-# This script is responsible for uninstalling the Zactonz Git plugin
-# from the cPanel server. It unregisters the plugin and removes the
-# plugin files from the server.
-#
-# @author Zactonz Technologies
-# @copyright Zactonz Technologies
-# @link https://zactonz.com/
-# @version 1.0.1
+set -uo pipefail
 
 PLUGIN_DIR="/usr/local/cpanel/base/frontend/jupiter/zctzgit"
 
-# --- Pre-flight Checks ---
 if [ "$(id -u)" -ne 0 ]; then
-    echo "This script must be run as root."
+    echo "This script must be run as root." >&2
     exit 1
 fi
 
-# --- Uninstallation ---
-echo "Unregistering and removing Zactonz Git plugin..."
+echo "Removing the cron entry and poller..."
+rm -f /etc/cron.d/zctzgit /usr/local/bin/zctzgit-poll
 
 if [ -f "$PLUGIN_DIR/install.json" ]; then
+    echo "Unregistering the plugin..."
     /usr/local/cpanel/scripts/uninstall_plugin "$PLUGIN_DIR/install.json"
 fi
 
-if [ -d "$PLUGIN_DIR" ]; then
-    rm -rf "$PLUGIN_DIR"
-fi
+rm -rf "$PLUGIN_DIR"
 
+echo
 echo "----------------------------------------------------"
-echo " Zactonz Git Plugin uninstalled."
-echo " Note: User-space webhook directories in public_html are not removed."
+echo " Zactonz Git removed."
+echo " Kept: /etc/zctzgit/config.json, each account's"
+echo " ~/.zctzgit directory, and every deployed repository."
 echo "----------------------------------------------------"
-exit 0
