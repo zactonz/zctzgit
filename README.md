@@ -20,13 +20,19 @@ Documentation: [developers.zactonz.com/cpanel-whm/zctzgit](https://developers.za
 
 | Component | Minimum |
 |---|---|
-| WHM / cPanel | 106 or newer, Jupiter theme |
-| Git | 2.18 or newer |
+| cPanel & WHM | 134 (LTS) or newer, Jupiter theme |
+| Git | 2.56.1, or the patched release in your series |
 | PHP | 7.2 or newer |
 | Web server | Apache or LiteSpeed |
 | Access | Root, over SSH or WHM Terminal |
 
 Tested on CentOS 7 and 8, AlmaLinux 8 and 9, Rocky Linux and CloudLinux OS. The server needs outbound HTTPS to github.com, and GitHub must be able to reach the account's domain over HTTPS if webhooks are used. The PHP `exec` function must be enabled for the account.
+
+Git's security release of 10 November 2026 fixed six vulnerabilities. Run a patched build: 2.56.1, 2.55.1, 2.54.1, 2.53.1, 2.52.1, 2.51.3 or 2.50.2 in the matching series. Anything below 2.50 no longer receives fixes. cPanel ships its own Git under `/usr/local/cpanel/3rdparty/bin/`, which may differ from the one on your `PATH` — check both, and confirm patch status with your distribution rather than assuming a recent-looking version number is fixed.
+
+Zactonz Git never clones recursively and never fetches submodules, so the recursive-clone vulnerability in that release does not apply to the deployments it performs. It also only ever connects to `github.com`.
+
+The installer registers the plugin with Jupiter only. Accounts on **Meridian**, the goal-based theme introduced in version 138, will not see it.
 
 The webhook receiver is served from the account's document root and relies on `.htaccess`, so automatic deployment requires Apache or LiteSpeed. Manual sync works on any web server.
 
