@@ -3,6 +3,9 @@
 set -uo pipefail
 
 PLUGIN_DIR="/usr/local/cpanel/base/frontend/jupiter/zctzgit"
+CONFIG_DIR="/etc/zctzgit"
+CRON_FILE="/etc/cron.d/zctzgit"
+POLLER="/usr/local/bin/zctzgit-poll"
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "This script must be run as root." >&2
@@ -10,7 +13,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 echo "Removing the cron entry and poller..."
-rm -f /etc/cron.d/zctzgit /usr/local/bin/zctzgit-poll
+rm -f "$CRON_FILE" "$POLLER"
 
 if [ -f "$PLUGIN_DIR/install.json" ]; then
     echo "Unregistering the plugin..."

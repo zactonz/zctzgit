@@ -47,6 +47,18 @@ jobs:
       - name: Run the suite with every diagnostic on
         run: php -d error_reporting=E_ALL -d display_errors=1 tests/run.php
 
+  installer:
+    name: Installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          coverage: none
+      - name: Install and uninstall against a sandboxed filesystem
+        run: bash tests/harness/install.sh
+
   shell:
     name: Shell syntax
     runs-on: ubuntu-latest
